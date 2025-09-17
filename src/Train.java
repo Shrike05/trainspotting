@@ -1,6 +1,3 @@
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.Semaphore;
 
@@ -8,17 +5,17 @@ import TSim.SensorEvent;
 import TSim.TSimInterface;
 
 public class Train extends Thread {
-    int trainid;
-    boolean goingDown;
-    TSimInterface tsi;
-    Semaphore[] semaphores;
-    int current_segment;
-    int target_segment;
-    int speed;
-    boolean stopped;
-    boolean reversed;
-    boolean crossing;
-    boolean targetUnacquired;
+    private int trainid;
+    private boolean goingDown;
+    private TSimInterface tsi;
+    private Semaphore[] semaphores;
+    private int current_segment;
+    private int target_segment;
+    private int speed;
+    private boolean stopped;
+    private boolean reversed;
+    private boolean crossing;
+    private boolean targetUnacquired;
 
     public Train(int trainid, boolean goingDown, TSimInterface tsi, Semaphore[] semaphores, int current_segment,
             int target_segment, int speed) {
@@ -36,138 +33,12 @@ public class Train extends Thread {
 
         try {
             semaphores[current_segment - 1].acquire();
-            // semaphores[target_segment - 1].acquire();
 
             tsi.setSpeed(trainid, speed);
             updateSwitches();
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    private static HashMap<List<Integer>, Integer> parseSensorToSegMap(String filePath) {
-        HashMap<List<Integer>, Integer> map = new HashMap<>();
-
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
-            String line;
-
-            while ((line = br.readLine()) != null) {
-                line = line.trim();
-
-                String[] parts = line.split(":");
-                if (parts.length != 2)
-                    continue;
-
-                // Left side -> "(x, y)"
-                String keyPart = parts[0].trim();
-                keyPart = keyPart.replace("(", "").replace(")", "");
-                String[] numbers = keyPart.split(",");
-
-                List<Integer> key = new ArrayList<>();
-                for (String num : numbers) {
-                    key.add(Integer.parseInt(num.trim()));
-                }
-
-                // Right side -> "x"
-                int value = Integer.parseInt(parts[1].trim());
-
-                map.put(key, value);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return map;
-    }
-
-    private static HashMap<Integer, List<Integer>> parseSegTransitions(String filePath) {
-        HashMap<Integer, List<Integer>> map = new HashMap<>();
-
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                line = line.trim();
-                if (line.isEmpty())
-                    continue;
-
-                String[] parts = line.split(":");
-                int key = Integer.parseInt(parts[0].trim());
-
-                List<Integer> values = new ArrayList<>();
-                for (String num : parts[1].trim().split("\\s+")) {
-                    values.add(Integer.parseInt(num));
-                }
-
-                map.put(key, values);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return map;
-    }
-
-    private static HashMap<List<Integer>, Command> parseSegToCommand(String filePath) {
-        HashMap<List<Integer>, Command> map = new HashMap<>();
-
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                line = line.trim();
-                if (line.isEmpty())
-                    continue;
-
-                // Split into "(a, b)" and "x y cmd"
-                String[] parts = line.split(":");
-                String keyPart = parts[0].trim().replace("(", "").replace(")", "");
-                String[] keyNums = keyPart.split(",");
-
-                List<Integer> key = new ArrayList<>();
-                for (String num : keyNums)
-                    key.add(Integer.parseInt(num.trim()));
-
-                String[] valueParts = parts[1].trim().split("\\s+");
-                Command cmd = new Command();
-                cmd.x = Integer.parseInt(valueParts[0]);
-                cmd.y = Integer.parseInt(valueParts[1]);
-                cmd.command = valueParts[2].trim().toLowerCase();
-
-                map.put(key, cmd);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return map;
-    }
-
-    private static HashMap<List<Integer>, String> parseSensorTypes(String filePath) {
-        HashMap<List<Integer>, String> map = new HashMap<>();
-
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                line = line.trim();
-                if (line.isEmpty())
-                    continue;
-
-                String[] parts = line.split(":");
-                String keyPart = parts[0].trim().replace("(", "").replace(")", "");
-                String[] keyNums = keyPart.split(",");
-
-                List<Integer> key = new ArrayList<>();
-                for (String num : keyNums)
-                    key.add(Integer.parseInt(num.trim()));
-
-                String value = parts[1].trim();
-
-                map.put(key, value);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return map;
     }
 
     private void stopTrain() {
@@ -199,7 +70,7 @@ public class Train extends Thread {
     }
 
     private void updateSwitches() {
-        HashMap<List<Integer>, Command> segToComd = parseSegToCommand("SegmentTransitionToCommand.txt");
+        HashMap<List<Integer>, Command> segToComd = Parsing.parseSegToCommand("SegmentTransitionToCommand.txt");
 
         List<Integer> segToSeg = current_segment < target_segment ? Arrays.asList(current_segment, target_segment)
                 : Arrays.asList(target_segment, current_segment);
@@ -248,8 +119,8 @@ public class Train extends Thread {
     }
 
     private void segmentSensorProcess(List<Integer> coords) {
-        HashMap<List<Integer>, Integer> senToSeg = parseSensorToSegMap("SensorToSegment.txt");
-        HashMap<Integer, List<Integer>> segToSegs = parseSegTransitions("SegmentTransitions.txt");
+        HashMap<List<Integer>, Integer> senToSeg = Parsing.parseSensorToSegMap("SensorToSegment.txt");
+        HashMap<Integer, List<Integer>> segToSegs = Parsing.parseSegTransitions("SegmentTransitions.txt");
 
         // Get the current segment that the train is on
         int segId = senToSeg.get(coords);
@@ -269,8 +140,9 @@ public class Train extends Thread {
             }
         }
 
-        // If the segment returned is not the target segment then we have not crossed yet
-        if (segId != target_segment){
+        // If the segment returned is not the target segment then we have not crossed
+        // yet
+        if (segId != target_segment) {
             return;
         }
 
@@ -311,7 +183,7 @@ public class Train extends Thread {
 
     public void run() {
 
-        HashMap<List<Integer>, String> sensorType = parseSensorTypes("SensorToType.txt");
+        HashMap<List<Integer>, String> sensorType = Parsing.parseSensorTypes("SensorToType.txt");
 
         try {
             while (true) {
