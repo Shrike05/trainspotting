@@ -9,30 +9,30 @@ public class Train extends Thread {
     private boolean goingDown;
     private TSimInterface tsi;
     private Semaphore[] semaphores;
-    private int current_segment;
-    private int target_segment;
+    private int currentSegment;
+    private int targetSegment;
     private int speed;
     private boolean stopped;
     private boolean reversed;
     private boolean crossing;
     private boolean targetUnacquired;
 
-    public Train(int trainid, boolean goingDown, TSimInterface tsi, Semaphore[] semaphores, int current_segment,
+    public Train(int trainid, boolean goingDown, TSimInterface tsi, Semaphore[] semaphores, int currentSegment,
             int target_segment, int speed) {
         this.speed = speed;
         this.trainid = trainid;
         this.goingDown = goingDown;
         this.tsi = tsi;
         this.semaphores = semaphores;
-        this.current_segment = current_segment;
-        this.target_segment = target_segment;
+        this.currentSegment = currentSegment;
+        this.targetSegment = target_segment;
         stopped = false;
         reversed = false;
         crossing = false;
         targetUnacquired = true;
 
         try {
-            semaphores[current_segment - 1].acquire();
+            semaphores[currentSegment - 1].acquire();
 
             tsi.setSpeed(trainid, speed);
             updateSwitches();
@@ -72,8 +72,8 @@ public class Train extends Thread {
     private void updateSwitches() {
         HashMap<List<Integer>, Command> segToComd = Parsing.parseSegToCommand("SegmentTransitionToCommand.txt");
 
-        List<Integer> segToSeg = current_segment < target_segment ? Arrays.asList(current_segment, target_segment)
-                : Arrays.asList(target_segment, current_segment);
+        List<Integer> segToSeg = currentSegment < targetSegment ? Arrays.asList(currentSegment, targetSegment)
+                : Arrays.asList(targetSegment, currentSegment);
 
         Command comd = segToComd.get(segToSeg);
 
@@ -112,7 +112,7 @@ public class Train extends Thread {
                     tsi.setSpeed(trainid, speed * (reversed ? -1 : 1));
                 }
             }
-            target_segment = nextSegmentId;
+            targetSegment = nextSegmentId;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -124,13 +124,13 @@ public class Train extends Thread {
 
         // Get the current segment that the train is on
         int segId = senToSeg.get(coords);
-        if (segId == current_segment && targetUnacquired) {
+        if (segId == currentSegment && targetUnacquired) {
             targetUnacquired = false;
             // Get all the further segments
-            List<Integer> segments = segToSegs.get(current_segment);
+            List<Integer> segments = segToSegs.get(currentSegment);
 
             // Filter out segments going in the wrong direction
-            segments = segments.stream().filter(nextSegment -> (nextSegment > current_segment) ^ goingDown)
+            segments = segments.stream().filter(nextSegment -> (nextSegment > currentSegment) ^ goingDown)
                     .toList();
 
             if (segments.size() > 0) {
@@ -142,15 +142,15 @@ public class Train extends Thread {
 
         // If the segment returned is not the target segment then we have not crossed
         // yet
-        if (segId != target_segment) {
+        if (segId != targetSegment) {
             return;
         }
 
         // We have reached the target segment
-        semaphores[current_segment - 1].release();
-        current_segment = target_segment;
+        semaphores[currentSegment - 1].release();
+        currentSegment = targetSegment;
         targetUnacquired = true;
-        target_segment = -1;
+        targetSegment = -1;
     }
 
     private void stationSensorProcess(List<Integer> coords) {
