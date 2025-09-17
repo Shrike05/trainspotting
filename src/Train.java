@@ -17,6 +17,11 @@ public class Train extends Thread {
     private boolean crossing;
     private boolean targetUnacquired;
 
+    private HashMap<List<Integer>, Integer> senToSeg;
+    private HashMap<Integer, List<Integer>> segToSegs;
+    private HashMap<List<Integer>, Command> segToComd;
+    private HashMap<List<Integer>, String> sensorType;
+
     public Train(int trainid, boolean goingDown, TSimInterface tsi, Semaphore[] semaphores, int currentSegment,
             int target_segment, int speed) {
         this.speed = speed;
@@ -26,16 +31,20 @@ public class Train extends Thread {
         this.semaphores = semaphores;
         this.currentSegment = currentSegment;
         this.targetSegment = target_segment;
-        stopped = false;
+        stopped = true;
         reversed = false;
         crossing = false;
         targetUnacquired = true;
 
+        senToSeg = Parsing.parseSensorToSegMap("SensorToSegment.txt");
+        segToSegs = Parsing.parseSegTransitions("SegmentTransitions.txt");
+        segToComd = Parsing.parseSegToCommand("SegmentTransitionToCommand.txt");
+        sensorType = Parsing.parseSensorTypes("SensorToType.txt");
+        
+        startTrain();
+
         try {
             semaphores[currentSegment - 1].acquire();
-
-            tsi.setSpeed(trainid, speed);
-            updateSwitches();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -70,8 +79,6 @@ public class Train extends Thread {
     }
 
     private void updateSwitches() {
-        HashMap<List<Integer>, Command> segToComd = Parsing.parseSegToCommand("SegmentTransitionToCommand.txt");
-
         List<Integer> segToSeg = currentSegment < targetSegment ? Arrays.asList(currentSegment, targetSegment)
                 : Arrays.asList(targetSegment, currentSegment);
 
@@ -80,8 +87,8 @@ public class Train extends Thread {
         boolean success = false;
         while (!success) {
             try {
-                tsi.setSwitch(comd.x, comd.y,
-                        comd.command.equals("left") ? TSimInterface.SWITCH_LEFT : TSimInterface.SWITCH_RIGHT);
+                Integer switchState = comd.command.equals("left") ? TSimInterface.SWITCH_LEFT : TSimInterface.SWITCH_RIGHT;
+                tsi.setSwitch(comd.x, comd.y, switchState);
                 success = true;
             } catch (Exception e) {
                 success = false;
@@ -119,9 +126,6 @@ public class Train extends Thread {
     }
 
     private void segmentSensorProcess(List<Integer> coords) {
-        HashMap<List<Integer>, Integer> senToSeg = Parsing.parseSensorToSegMap("SensorToSegment.txt");
-        HashMap<Integer, List<Integer>> segToSegs = Parsing.parseSegTransitions("SegmentTransitions.txt");
-
         // Get the current segment that the train is on
         int segId = senToSeg.get(coords);
         if (segId == currentSegment && targetUnacquired) {
@@ -182,9 +186,6 @@ public class Train extends Thread {
     }
 
     public void run() {
-
-        HashMap<List<Integer>, String> sensorType = Parsing.parseSensorTypes("SensorToType.txt");
-
         try {
             while (true) {
                 // Wait until the next event
