@@ -1,2 +1,1 @@
-
-public class Command{ int x; int y; String command; }
+public class Command{ int x; int y; CommandType command; }

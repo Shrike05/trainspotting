@@ -17,10 +17,10 @@ public class Train extends Thread {
     private boolean crossing;
     private boolean targetUnacquired;
 
-    private HashMap<List<Integer>, Integer> senToSeg;
+    private HashMap<Coordinate, Integer> senToSeg;
     private HashMap<Integer, List<Integer>> segToSegs;
     private HashMap<List<Integer>, Command> segToComd;
-    private HashMap<List<Integer>, String> sensorType;
+    private HashMap<Coordinate, SensorType> sensorType;
 
     public Train(int trainid, boolean goingDown, TSimInterface tsi, Semaphore[] semaphores, int currentSegment,
             int target_segment, int speed) {
@@ -87,7 +87,7 @@ public class Train extends Thread {
         boolean success = false;
         while (!success) {
             try {
-                Integer switchState = comd.command.equals("left") ? TSimInterface.SWITCH_LEFT : TSimInterface.SWITCH_RIGHT;
+                Integer switchState = comd.command.equals(CommandType.Left) ? TSimInterface.SWITCH_LEFT : TSimInterface.SWITCH_RIGHT;
                 tsi.setSwitch(comd.x, comd.y, switchState);
                 success = true;
             } catch (Exception e) {
@@ -125,7 +125,7 @@ public class Train extends Thread {
         }
     }
 
-    private void segmentSensorProcess(List<Integer> coords) {
+    private void segmentSensorProcess(Coordinate coords) {
         // Get the current segment that the train is on
         int segId = senToSeg.get(coords);
         if (segId == currentSegment && targetUnacquired) {
@@ -157,8 +157,8 @@ public class Train extends Thread {
         targetSegment = -1;
     }
 
-    private void stationSensorProcess(List<Integer> coords) {
-        if ((goingDown && coords.get(1) < 10) || (!goingDown && coords.get(1) > 10)) {
+    private void stationSensorProcess(Coordinate coords) {
+        if ((goingDown && coords.y < 10) || (!goingDown && coords.y > 10)) {
             return;
         }
 
@@ -196,18 +196,18 @@ public class Train extends Thread {
                 }
 
                 // Get the coordinates of the sensor
-                List<Integer> coords = Arrays.asList(ev.getXpos(), ev.getYpos());
+                Coordinate coords = new Coordinate(ev.getXpos(), ev.getYpos());
 
-                String type = sensorType.get(coords);
+                SensorType type = sensorType.get(coords);
 
                 switch (type) {
-                    case "Seg":
+                    case SensorType.Segment:
                         segmentSensorProcess(coords);
                         break;
-                    case "Sta":
+                    case SensorType.Station:
                         stationSensorProcess(coords);
                         break;
-                    case "Cro":
+                    case SensorType.Crossing:
                         crossingSensorProcess();
                         break;
                     default:

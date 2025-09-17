@@ -6,8 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 
 public class Parsing {
-    public static HashMap<List<Integer>, Integer> parseSensorToSegMap(String filePath) {
-        HashMap<List<Integer>, Integer> map = new HashMap<>();
+    public static HashMap<Coordinate, Integer> parseSensorToSegMap(String filePath) {
+        HashMap<Coordinate, Integer> map = new HashMap<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
@@ -24,10 +24,11 @@ public class Parsing {
                 keyPart = keyPart.replace("(", "").replace(")", "");
                 String[] numbers = keyPart.split(",");
 
-                List<Integer> key = new ArrayList<>();
+                List<Integer> keys = new ArrayList<>();
                 for (String num : numbers) {
-                    key.add(Integer.parseInt(num.trim()));
+                    keys.add(Integer.parseInt(num.trim()));
                 }
+                Coordinate key = new Coordinate(keys.get(0), keys.get(1));
 
                 // Right side -> "x"
                 int value = Integer.parseInt(parts[1].trim());
@@ -91,7 +92,18 @@ public class Parsing {
                 Command cmd = new Command();
                 cmd.x = Integer.parseInt(valueParts[0]);
                 cmd.y = Integer.parseInt(valueParts[1]);
-                cmd.command = valueParts[2].trim().toLowerCase();
+
+                switch (valueParts[2].trim().toLowerCase()) {
+                    case "left":
+                        cmd.command = CommandType.Left;
+                        break;
+                    case "right":
+                        cmd.command = CommandType.Right;
+                        break;
+                    default:
+                        cmd.command = CommandType.Right;
+                        break;
+                }
 
                 map.put(key, cmd);
             }
@@ -102,8 +114,8 @@ public class Parsing {
         return map;
     }
 
-    public static HashMap<List<Integer>, String> parseSensorTypes(String filePath) {
-        HashMap<List<Integer>, String> map = new HashMap<>();
+    public static HashMap<Coordinate, SensorType> parseSensorTypes(String filePath) {
+        HashMap<Coordinate, SensorType> map = new HashMap<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
@@ -116,11 +128,26 @@ public class Parsing {
                 String keyPart = parts[0].trim().replace("(", "").replace(")", "");
                 String[] keyNums = keyPart.split(",");
 
-                List<Integer> key = new ArrayList<>();
+                List<Integer> keys = new ArrayList<>();
                 for (String num : keyNums)
-                    key.add(Integer.parseInt(num.trim()));
+                    keys.add(Integer.parseInt(num.trim()));
 
-                String value = parts[1].trim();
+                Coordinate key = new Coordinate(keys.get(0), keys.get(1));
+
+                SensorType value = SensorType.Segment;
+                switch (parts[1].trim()) {
+                    case "Seg":
+                        value = SensorType.Segment;
+                        break;
+                    case "Sta":
+                        value = SensorType.Station;
+                        break;
+                    case "Cro":
+                        value = SensorType.Crossing;
+                        break;
+                    default:
+                        break;
+                }
 
                 map.put(key, value);
             }
