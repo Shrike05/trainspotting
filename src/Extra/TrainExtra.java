@@ -1,5 +1,8 @@
-import java.util.*;
-import java.util.concurrent.Semaphore;
+package Extra;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 
 import TSim.SensorEvent;
 import TSim.TSimInterface;
@@ -9,11 +12,11 @@ import Util.Coordinate;
 import Util.Parsing;
 import Util.SensorType;
 
-public class Train extends Thread {
+public class TrainExtra extends Thread {
     private int trainid;
     private boolean goingDown;
     private TSimInterface tsi;
-    private Semaphore[] semaphores;
+    private SegmentMonitor[] monitors;
     private int currentSegment;
     private int targetSegment;
     private int speed;
@@ -27,13 +30,13 @@ public class Train extends Thread {
     private HashMap<List<Integer>, Command> segToComd;
     private HashMap<Coordinate, SensorType> sensorType;
 
-    public Train(int trainid, boolean goingDown, TSimInterface tsi, Semaphore[] semaphores, int currentSegment,
+    public TrainExtra(int trainid, boolean goingDown, TSimInterface tsi, SegmentMonitor[] monitors, int currentSegment,
             int target_segment, int speed) {
         this.speed = speed;
         this.trainid = trainid;
         this.goingDown = goingDown;
         this.tsi = tsi;
-        this.semaphores = semaphores;
+        this.monitors = monitors;
         this.currentSegment = currentSegment;
         this.targetSegment = target_segment;
         stopped = true;
@@ -49,7 +52,7 @@ public class Train extends Thread {
         startTrain();
 
         try {
-            semaphores[currentSegment - 1].acquire();
+            monitors[currentSegment - 1].enter();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -110,7 +113,8 @@ public class Train extends Thread {
             // As long as we haven't found a free segment, keep checking
             while (!foundFreeSegment) {
                 for (Integer nextSegment : candidateSegments) {
-                    if (semaphores[nextSegment - 1].tryAcquire()) {
+                    if (!monitors[nextSegment - 1].getOccupied()) {
+                        monitors[nextSegment - 1].enter();
                         foundFreeSegment = true;
                         nextSegmentId = nextSegment;
                         break;
@@ -156,7 +160,7 @@ public class Train extends Thread {
         }
 
         // We have reached the target segment
-        semaphores[currentSegment - 1].release();
+        monitors[currentSegment - 1].leave();
         currentSegment = targetSegment;
         targetUnacquired = true;
         targetSegment = -1;
@@ -181,12 +185,13 @@ public class Train extends Thread {
     private void crossingSensorProcess() {
         crossing = !crossing;
         if (crossing) {
-            while (!semaphores[8].tryAcquire()) {
+            while (monitors[8].getOccupied()) {
                 stopTrain();
             }
+            monitors[8].enter();
             startTrain();
         } else {
-            semaphores[8].release();
+            monitors[8].leave();
         }
     }
 

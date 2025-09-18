@@ -1,5 +1,8 @@
 import java.nio.file.Files;
 import java.nio.file.Paths;
+
+import Extra.Lab1Extra;
+
 import java.io.IOException;
 
 import TSim.TSimInterface;
@@ -34,8 +37,8 @@ public class Main {
         String tsimCommand = String.format("%s --speed=%d %s", tsim, tsim_speed, map);
         Process p = Runtime.getRuntime().exec(tsimCommand);
         TSimInterface.init(p.getInputStream(), p.getOutputStream());
-        TSimInterface.getInstance().setDebug(true);
-        new Lab1(train1_speed, train2_speed);
+        TSimInterface.getInstance().setDebug(false);
+        new Lab1Extra(train1_speed, train2_speed);
         // new Lab1Extra(train1_speed, train2_speed);
         p.waitFor();
     }

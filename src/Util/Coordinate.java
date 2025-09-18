@@ -1,8 +1,10 @@
+package Util;
 import java.util.Objects;
 
 public class Coordinate {
-    Integer x;
-    Integer y;
+    public Integer x;
+    public Integer y;
+
     public Coordinate(Integer x, Integer y){
         this.x = x;
         this.y = y;
